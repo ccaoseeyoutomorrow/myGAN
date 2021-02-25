@@ -20,7 +20,6 @@ def main():
     model = keras.Sequential()
     model.add(keras.Input(shape=(28, 28, 1)))  # 250x250 RGB images
     # model.add(layers.Convolution2D(  # 第一层卷积(28*28)
-    #     input_shape=(28, 28, 1),
     #     filters=32,
     #     kernel_size=5,
     #     strides=1,

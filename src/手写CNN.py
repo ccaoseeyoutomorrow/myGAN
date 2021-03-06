@@ -23,9 +23,18 @@ class Dense_layer():
         self.num = num
 
     def forward(self,input):
+        """
+        根据input的batch一起进行推测
+        :param input:
+        :return:
+        """
         self.input=input
         y = np.dot(input, self.kernel) + self.bias
         return y
+
+    def predict(self,input):
+        kerneltemp=np.mean(self.kernel)
+
 
     def backward(self, dz, learning_rate):
         """
@@ -129,13 +138,13 @@ class Convolution:
 
 def loadmnist():
     # 训练集文件
-    img_train_path = '../MNIST_data/train-images.idx3-ubyte'
+    img_train_path = 'C:/Users\Administrator/Desktop/GAN/MNIST_data/train-images.idx3-ubyte'
     # 训练集标签文件
-    label_train_path = '../MNIST_data/train-labels.idx1-ubyte'
+    label_train_path = 'C:/Users\Administrator/Desktop/GAN/MNIST_data/train-labels.idx1-ubyte'
     # 测试集文件
-    img_test_path = '../MNIST_data/t10k-images.idx3-ubyte'
+    img_test_path = 'C:/Users\Administrator/Desktop/GAN/MNIST_data/t10k-images.idx3-ubyte'
     # 测试集标签文件
-    label_test_path = '../MNIST_data/t10k-labels.idx1-ubyte'
+    label_test_path = 'C:/Users\Administrator/Desktop/GAN/MNIST_data/t10k-labels.idx1-ubyte'
 
     with open(label_test_path, 'rb') as file:
         test_labels = np.frombuffer(file.read(), dtype=np.uint8, offset=8)
@@ -192,11 +201,15 @@ class mymodel:
         """
         前向传播
         """
+        test=self.dense1.predict(X)
         outcome = self.dense1.forward(X)
         outcome = self.relu1.forward(outcome)
         outcome = self.dense2.forward(outcome)
         outcome = self.softmax.forward(outcome)
         return outcome
+
+    def preict(self,X):
+        pass
 
     def back_propagation(self, Y):
         """
@@ -216,7 +229,6 @@ class mymodel:
             inputy=self.inputy[i*self.batch:(i+1)*self.batch]
             outcome=self.forward_propagation(inputx)
             losttemp=cross_entropy_error(inputy,outcome) #计算损失函数
-            print("time",i,":",losttemp)
             lost+=losttemp
             outcome = self.back_propagation(inputy)
         print("lost:",lost)
@@ -237,8 +249,9 @@ class mymodel:
 
 def main():
     Model = mymodel(200)
-    Model.train()
-    print(Model.predict())
+    for i in range(10):
+        Model.train()
+        print(Model.predict())
     # for i in range(5):
     #     err = 0
     #     for j in range(60000):  # 训练样本数

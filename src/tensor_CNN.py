@@ -3,7 +3,6 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.layers import Dense
 from tensorflow.python.keras.utils import np_utils
-
 from 手写CNN import loadmnist
 
 

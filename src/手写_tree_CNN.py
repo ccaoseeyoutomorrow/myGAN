@@ -1,8 +1,19 @@
 import numpy as np
-import struct
-import scipy.io as sio
-from tensorflow.python.keras.utils import np_utils
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 
+
+def read_trainx():
+    data=np.load('../Defect_Data/4号树木x.npy')
+    data=np.array(data,dtype='float')
+    return data
+
+def read_trainy():
+    label=np.loadtxt('../Defect_Data/label4_20.txt',encoding='utf-8',dtype='int')
+    label=np.array(label).reshape(-1)
+    temp=np.zeros(shape=(5476,400),dtype='int')
+    temp[:,0:400]=label
+    return temp
 
 class Dense_layer():
     def __init__(self, m,n, num):
@@ -107,6 +118,29 @@ class SoftMax:
         # print(ret)
         return ret
 
+class my_activition:
+    def __init__(self):
+        self.y = None
+
+    def forward(self, X):
+        Xt=X.reshape(X.shape[0]*X.shape[1])
+        mint=np.min(X)
+        maxt=np.max(X)
+        mm=maxt-mint
+        thre1=mint+mm/4 #空白面积的分隔符
+        thre2=maxt-mm/10 #缺陷面积的分隔符
+        xiabiao0=np.where(Xt<=thre1)[0] #找出在面积外的下标，为空白
+        # xiabiao1=np.where(X>thre1 and X<thre2)[0] #找出在面积内的下标
+        xiabiao2 = np.where(Xt>=thre2)[0]#找出在面积内比最大值小22的下标号，即为缺陷
+        Xt[:]=1 #正常区域
+        Xt[xiabiao0]=0 #空白
+        Xt[xiabiao2]=2 #缺陷
+        self.y=Xt.reshape(X.shape[0],X.shape[1])
+        return self.y
+
+    def backward(self, labels):
+        dx = (self.y - labels)
+        return dx
 
 class Convolution:
     def __init__(self, W, fb, stride=1, pad=0):
@@ -136,35 +170,7 @@ class Convolution:
         return Z  # 说明：这里返回的是一个数，到时候是要赋值给新矩阵的
 
 
-def loadmnist():
-    # 训练集文件
-    img_train_path = 'D:/02_soft_temp/py_temp/myGAN/MNIST_data/train-images.idx3-ubyte'
-    # 训练集标签文件
-    label_train_path = 'D:/02_soft_temp/py_temp/myGAN/MNIST_data/train-labels.idx1-ubyte'
-    # 测试集文件
-    img_test_path = 'D:/02_soft_temp/py_temp/myGAN/MNIST_data/t10k-images.idx3-ubyte'
-    # 测试集标签文件
-    label_test_path = 'D:/02_soft_temp/py_temp/myGAN/MNIST_data/t10k-labels.idx1-ubyte'
 
-    with open(label_test_path, 'rb') as file:
-        test_labels = np.frombuffer(file.read(), dtype=np.uint8, offset=8)
-        m_t10k = len(test_labels)
-        test_labels = np.asarray(test_labels).reshape(m_t10k, 1)
-
-    with open(label_train_path, 'rb') as file:
-        train_labels = np.frombuffer(file.read(), dtype=np.uint8, offset=8)
-        m_train = len(train_labels)
-        train_labels = np.asarray(train_labels).reshape(m_train, 1)
-
-    with open(img_test_path, 'rb') as file:
-        test_images = np.frombuffer(file.read(), dtype=np.uint8, offset=16)
-        test_images = np.asarray(test_images).reshape(m_t10k, 28, 28)
-
-    with open(img_train_path, 'rb') as file:
-        train_image = np.frombuffer(file.read(), dtype=np.uint8, offset=16)
-        train_image = np.asarray(train_image).reshape(m_train, 28, 28)
-
-    return train_image, train_labels, test_images, test_labels
 
 def cross_entropy_error(labels,logits):
     """
@@ -178,24 +184,24 @@ def cross_entropy_error(labels,logits):
 class mymodel:
     def __init__(self,batch):
         # 获取数据
-        x_train, y_train, x_test, y_test = loadmnist()
-        x_train = x_train.reshape(-1, 28, 28, 1) / 255.0
-        x_test = x_test.reshape(-1, 28, 28, 1) / 255.0
-        y_train = np_utils.to_categorical(y_train, num_classes=10)
-        y_test = np_utils.to_categorical(y_test, num_classes=10)
+        x_train=read_trainx()
+        y_train=read_trainy()
+        x_test=x_train[0:1000]
+        y_test=y_train[0:1000]
+        x_train=x_train[1000:]
+        y_train=y_train[1000:]
 
         # 构建网络
-        x_train = x_train.reshape(-1, 28 * 28)
         self.batch=batch
-        self.learning_rate = 1
+        self.learning_rate = 3
         self.inputx = x_train
         self.inputy = y_train
-        self.x_test=x_test.reshape(-1, 28 * 28)
+        self.x_test=x_test
         self.y_test = y_test
-        self.dense1 = Dense_layer(batch,self.inputx.shape[1], 32)
+        self.dense1 = Dense_layer(batch,self.inputx.shape[1], 1000)
         self.relu1 = Relu()
-        self.dense2 = Dense_layer(batch,32, 10)
-        self.softmax = SoftMax()
+        self.dense2 = Dense_layer(batch,1000, 400)
+        self.softmax = my_activition()
 
     def forward_propagation(self,X):
         """
@@ -240,18 +246,49 @@ class mymodel:
             inputx=self.x_test[i*self.batch:(i+1)*self.batch]
             inputy=self.y_test[i*self.batch:(i+1)*self.batch]
             outcome = self.forward_propagation(inputx)
-            one_hot = np.zeros_like(outcome)
-            one_hot[range(inputx.shape[0]), np.argmax(outcome, axis=1)] = 1
-            accuracy += np.sum(np.argmax(one_hot, axis=1) == np.argmax(inputy, axis=1))
+            temp=np.where(outcome!=inputy)[0]
+            sum=temp.shape[0]
+            accuracy+=sum/inputy[0].shape[0]
         accuracy=accuracy/self.x_test.shape[0]
         return accuracy
 
+    def show_one(self):
+        """
+        显示预测的一张图
+        """
+        inputx=self.x_test[0*self.batch:(0+1)*self.batch]
+        outcome = self.forward_propagation(inputx)
+        a=outcome[0].reshape(20,20)
+        # 红-黄-绿 无渐变
+        cdict = {'red': ((0.0, 0.0, 1.0),
+                         (0.3, 1.0, 0.0),
+                         (0.6, 0.0, 1.0),
+                         (1, 1.0, 1.0)),
+
+                 'green': ((0.0, 0.0, 1.0),
+                           (0.3, 1.0, 1.0),
+                           (0.6, 1.0, 0.0),
+                           (1, 0.0, 0.0)),
+
+                 'blue': ((0.0, 0.0, 1.0),
+                          (0.3, 1.0, 0.0),
+                          (0.6, 0.0, 0.0),
+                          (1, 0.0, 0.0)),
+                 }
+        cmap_name = 'defect'
+        fig, axs = plt.subplots(figsize=(15, 15))
+        blue_red1 = LinearSegmentedColormap(cmap_name, cdict)
+        plt.register_cmap(cmap=blue_red1)
+        im1 = axs.imshow(a, cmap=blue_red1)
+        fig.colorbar(im1, ax=axs)  # 在图旁边加上颜色bar
+        plt.show()
 
 def main():
     Model = mymodel(200)
-    for i in range(10):
+    for i in range(5):
         Model.train()
         print(Model.predict())
+    Model.show_one()
     # for i in range(5):
     #     err = 0
     #     for j in range(60000):  # 训练样本数

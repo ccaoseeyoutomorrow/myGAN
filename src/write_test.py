@@ -58,7 +58,7 @@ def write_x():
             data_list = np.concatenate((data_list, locat_list), axis=0)
             outcome.append(data_list)
     outcome = np.array(outcome).reshape(-1, 44)
-    np.save('../Defect_Data/4号树木x_8x25.npy', outcome)
+    # np.save('../Defect_Data/4号树木x_8x25.npy', outcome)
 
 def write_y():
     """

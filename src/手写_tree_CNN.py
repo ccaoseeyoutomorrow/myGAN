@@ -118,20 +118,24 @@ class SoftMax:
         # print(ret)
         return ret
 
-class my_activition:
+class generate_img:
     def __init__(self):
         self.y = None
+        self.thre1=0
+        self.thre2=0
 
     def forward(self, X):
+        self.x=X
         Xt=X.reshape(X.shape[0]*X.shape[1])
         mint=np.min(X)
         maxt=np.max(X)
         mm=maxt-mint
-        thre1=mint+mm/4 #空白面积的分隔符
-        thre2=maxt-mm/10 #缺陷面积的分隔符
-        xiabiao0=np.where(Xt<=thre1)[0] #找出在面积外的下标，为空白
+        if self.thre1==self.thre2:
+            thre1=mint+mm/4 #空白面积的分隔符
+            thre2=maxt-mm/10 #缺陷面积的分隔符
+        xiabiao0=np.where(Xt<=self.thre1)[0] #找出在面积外的下标，为空白
         # xiabiao1=np.where(X>thre1 and X<thre2)[0] #找出在面积内的下标
-        xiabiao2 = np.where(Xt>=thre2)[0]#找出在面积内比最大值小22的下标号，即为缺陷
+        xiabiao2 = np.where(Xt>=self.thre2)[0]#找出在面积内比最大值小22的下标号，即为缺陷
         Xt[:]=1 #正常区域
         Xt[xiabiao0]=0 #空白
         Xt[xiabiao2]=2 #缺陷
@@ -139,6 +143,12 @@ class my_activition:
         return self.y
 
     def backward(self, labels):
+        m = self.x.shape[0]
+        dz=self.y - labels
+        self.dth1 = np.sum(dz, axis=0, keepdims=True) / m
+
+        # 更新W和b
+        self.thre1 = self.thre1 - 0.1 * self.dth1
         dx = (self.y - labels)
         return dx
 
@@ -191,17 +201,19 @@ class mymodel:
         x_train=x_train[1000:]
         y_train=y_train[1000:]
 
-        # 构建网络
+        # 基础参数
         self.batch=batch
         self.learning_rate = 3
         self.inputx = x_train
         self.inputy = y_train
         self.x_test=x_test
         self.y_test = y_test
+
+        #构建网络
         self.dense1 = Dense_layer(batch,self.inputx.shape[1], 1000)
         self.relu1 = Relu()
         self.dense2 = Dense_layer(batch,1000, 400)
-        self.softmax = my_activition()
+        self.Gimg = generate_img()
 
     def forward_propagation(self,X):
         """
@@ -211,7 +223,7 @@ class mymodel:
         outcome = self.dense1.forward(X)
         outcome = self.relu1.forward(outcome)
         outcome = self.dense2.forward(outcome)
-        outcome = self.softmax.forward(outcome)
+        outcome = self.Gimg.forward(outcome)
         return outcome
 
     def preict(self,X):
@@ -221,7 +233,7 @@ class mymodel:
         """
         反向传播
         """
-        outcome = self.softmax.backward(Y)
+        outcome = self.Gimg.backward(Y)
         outcome = self.dense2.backward(outcome,self.learning_rate)
         outcome = self.relu1.backward(outcome)
         outcome = self.dense1.backward(outcome, self.learning_rate)

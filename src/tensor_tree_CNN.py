@@ -5,13 +5,13 @@ import tensorflow as tf
 import numpy as np
 
 
-def read_trainx():
-    data=np.load('../Defect_Data/4号树木x_8x25.npy')
+def read_trainx(filname):
+    data=np.load(filname)
     data=np.array(data,dtype='float')
     return data
 
-def read_trainy(length):
-    label=np.loadtxt('../Defect_Data/label4_onlydefect_20.txt',encoding='utf-8',dtype='int')
+def read_trainy(length,filename):
+    label=np.loadtxt(filename,encoding='utf-8',dtype='int')
     label=np.array(label).reshape(-1)
     temp=np.zeros(shape=(length,400),dtype='int')
     temp[:,0:400]=label
@@ -47,14 +47,27 @@ def read_testy(length):
     Y=np.concatenate((temp1,temp2,temp3))
     return Y
 
+def loadmnist():
+    x_train1=read_trainx('../Defect_Data/3号树木x_median.npy')
+    x_train2=read_trainx('../Defect_Data/4号树木x_median.npy')
+    x_train=np.concatenate((x_train1,x_train2),axis=0)
+    y_train1=read_trainy(x_train1.shape[0],'../Defect_Data/label3_onlydefect_20.txt')
+    y_train2=read_trainy(x_train2.shape[0],'../Defect_Data/label4_onlydefect_20.txt')
+    y_train=np.concatenate((y_train1,y_train2),axis=0)
+    index = [i for i in range(len(x_train))]
+    np.random.shuffle(index)
+    x_train=x_train[index]
+    y_train=y_train[index]
+    x_test=x_train[0:100]
+    y_test=y_train[0:100]
+    x_train=x_train[100:]
+    y_train=y_train[100:]
+    return x_train,y_train,x_test,y_test
 
 
 def main():
     # 获取数据
-    x_train=read_trainx()
-    y_train=read_trainy(x_train.shape[0])
-    x_test,len_temp=read_testx()
-    y_test=read_testy(len_temp)
+    x_train,y_train,x_test,y_test=loadmnist()
 
 
 

@@ -18,13 +18,13 @@ def main():
 
     model = keras.Sequential()
     model.add(keras.Input(shape=(28, 28, 1)))  # 250x250 RGB images
-    model.add(layers.Convolution2D(  # 第一层卷积(28*28)
-        filters=32,
-        kernel_size=5,
-        strides=1,
-        padding='same',
-        activation='relu'
-    ))
+    # model.add(layers.Convolution2D(  # 第一层卷积(28*28)
+    #     filters=32,
+    #     kernel_size=5,
+    #     strides=1,
+    #     padding='same',
+    #     activation='relu'
+    # ))
     # model.add(layers.MaxPooling2D(  # 第一层池化(14*14),相当于28除以2
     #     pool_size=2,
     #     strides=2,

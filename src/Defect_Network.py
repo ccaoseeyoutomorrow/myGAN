@@ -4,11 +4,15 @@
 import math, os, os.path
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse
 from matplotlib.colors import LinearSegmentedColormap
 import time
+import tensorflow as tf
 from numpy.linalg import lstsq
 import re
+from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras.layers import Dense
+
 
 Cell_Number = 20
 NodeA_num = 8  # 节点数量
@@ -659,7 +663,7 @@ def get_speed_ray(file_time_name, file_locat_name):
     return Ultra_Line
 
 
-def get_speed_raybynpy(filename, labelname):
+def get_speed_raybynpy(filename):
     data = np.load(filename)
     data = np.array(data, dtype='float')
     last_network_number=int(((NodeA_num-1)*NodeA_num)/2*2)+1
@@ -679,9 +683,67 @@ def get_speed_raybynpy(filename, labelname):
         data_28x28[i][:]=temp
     return data_28x28
 
+def read_trainx(filename):
+    data=np.load(filename)
+    data=np.array(data,dtype='float')
+    return data
+
+def read_trainy(length,filename):
+    label=np.loadtxt(filename,encoding='utf-8',dtype='int')
+    label=np.array(label).reshape(-1)
+    temp=np.zeros(shape=(length,400),dtype='int')
+    temp[:,0:400]=label
+    return temp
+
+def loadmnist():
+    x_train1=read_trainx('../Defect_Data/3号树木x_GAN.npy')
+    x_train2=read_trainx('../Defect_Data/4号树木x_GAN.npy')
+    x_train=np.concatenate((x_train1,x_train2),axis=0)
+    y_train1=read_trainy(x_train1.shape[0],'../Defect_Data/label3_onlydefect_20.txt')
+    y_train2=read_trainy(x_train2.shape[0],'../Defect_Data/label4_onlydefect_20.txt')
+    y_train=np.concatenate((y_train1,y_train2),axis=0)
+    index = [i for i in range(len(x_train))]
+    np.random.shuffle(index)
+    x_train=x_train[index]
+    y_train=y_train[index]
+    x_test=x_train[0:100]
+    y_test=y_train[0:100]
+    x_train=x_train[100:]
+    y_train=y_train[100:]
+    return x_train,y_train,x_test,y_test
+
+
+
+def train():
+    # 获取数据
+    x_train,y_train,x_test,y_test=loadmnist()
+
+    model = keras.Sequential()
+    model.add(keras.Input(shape=(20, 20,57)))  # 250x250 RGB images
+    # model.add(layers.MaxPooling2D(  # 第一层池化(14*14),相当于28除以2
+    #     pool_size=2,
+    #     strides=2,
+    #     padding='same'
+    # ))
+    model.add(layers.Flatten())  # 把池化层的输出扁平化为一维数据
+    model.add(Dense(20*20*57,activation='softplus'))  # 第一层全连接层
+    model.add(Dense(20*20*28,activation='softplus'))  # 第一层全连接层
+    model.add(Dense(20*20*10,activation='relu'))  # 第一层全连接层
+    model.add(Dense(400,activation=tf.sigmoid))  # 第二层全连接层
+    model.summary()
+
+    model.compile(optimizer='adam',loss='mse',metrics=['accuracy'])
+    model.fit(x=x_train,y=y_train, batch_size=1, epochs=10)
+    result = model.evaluate(x_test, y_test)
+    print('TEST ACC:', result[1])
+
+
 
 if __name__ == '__main__':
-    npy_name = '../Defect_Data/4号树木x_median.npy'
-    label_name = '../Defect_Data/label4_20.txt'
-    data_28x28=get_speed_raybynpy(npy_name,label_name)
-    np.save('../Defect_Data/4号树木x_GAN.npy', data_28x28)
+    # 预处理数据
+    # npy_name = '../Defect_Data/3号树木x_median.npy'
+    # label_name = '../Defect_Data/label3_20.txt'
+    # data_GAN=get_speed_raybynpy(npy_name)
+    # np.save('../Defect_Data/3号树木x_GAN.npy', data_GAN)
+    # train()
+    train()
